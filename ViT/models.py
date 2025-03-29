@@ -88,3 +88,38 @@ class Attention(nn.Module):
     output = self.proj(attention)
     return self.proj_drop(output)
 
+
+class MLP(nn.Module):
+  """
+  MLP module for the transformer block.
+  Parameters:
+    in_features: dim of input
+    hidden_features: dim of hidden layer
+    out_features: dim of output
+    p: dropout rate
+  Attributes:
+    fc: first linear layer
+    act: GeLU activation
+    fc2: second linear layer
+    drop: Dropout layer
+  """
+  def __init__(self, 
+               in_features: int=768, 
+               hidden_features: int=3072, 
+               out_features: int=768, 
+               p:float=0.1):
+    super().__init__()
+    self.fc = nn.Linear(in_features, hidden_features)
+    self.drop = nn.Dropout(p)
+    self.act = nn.GELU()
+    self.fc2 = nn.Linear(hidden_features, out_features)
+
+  def forward(self, x):
+    x = self.fc(x)
+    x = self.act(x)
+    x = self.drop(x)
+    x = self.fc2(x)
+    return self.drop(x)
+
+
+
