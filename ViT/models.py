@@ -156,4 +156,62 @@ class Block(nn.Module):
     return x + self.mlp(self.norm2(x))
 
 
-class 
+class VisionTransformer(nn.Module):
+  """
+  Basic Implimentation of the ViT.
+  Parameters:
+    img_size: Dimension of the Square Image
+    patch_size: Dimension of the Square Patch
+    in_channels: Number of channels
+    n_classes: Number of classes
+    embed_dim: Dimensionality of token embeddings
+    depth: Number of Transformer blocks
+    n_heads: Number of attention heads in MHA
+    mlp_ratio: Dimensionality of hidden layer in MLP, mlp_ratio*input_dim
+    qkv_bias: Whether to include bias in Q, K, V projections
+    p: Dropout Prob
+    attn_p: Dropout prob for attention 
+
+  Attributes:
+    patch_embed: Instance of PatchEmbedding module
+    cls_token: learnable parameter representing the first token in the sequence, [embed_dim,]
+    pos_emb: Positional Embeddings for the inputs to the transformer, [n_patches+1, embed_dim]
+    pos_drop: Dropout Layer
+    blocks: ModuleList of Transformer blocks
+    norm: Layer normalization
+    head: final output layer
+  """
+  def __init__(self, 
+               img_size: int, 
+               patch_size: int, 
+               in_channels: int, 
+               n_classes: int, 
+               embed_dim: int, 
+               depth: int, 
+               n_heads: int, 
+               mlp_ratio: int, 
+               qkv_bias: bool, 
+               p: float, 
+               attn_p: float):
+    super().__init__()
+    self.patch_embed = PatchEmbedding(img_size, patch_size, in_channels, embed_dim)
+    self.cls_token = nn.Parameter(torch.ones(1, 1, embed_dim))
+    self.pos_embed = nn.Parameter(torch.ones(1, self.patch_embed.n_patches + 1, embed_dim))
+    self.pos_drop = nn.Dropout(p)
+    self.blocks = nn.ModuleList([Block(embed_dim, n_heads, mlp_ratio, qkv_bias, p, attn_p) for _ in range(depth)])
+    self.norm = nn.LayerNorm(embed_dim, eps=1e-6)
+    self.head = nn.Linear(embed_dim, n_classes)
+
+  def forward(self, x):
+    batch_size = x.shape[0]
+    x = self.patch_embed(x)
+    cls_token = self.cls_token.expand(batch_size, -1, -1)
+    x = torch.cat((cls_token, x), dim=1)
+    x = x + self.pos_embed
+    x = self.pos_drop(x)
+    for blk in self.blocks:
+      x = blk(x)
+    x = self.norm(x)
+    cls_token_final = x[:, 0]
+    return self.head(cls_token_final)
+
