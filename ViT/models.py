@@ -122,4 +122,38 @@ class MLP(nn.Module):
     return self.drop(x)
 
 
+class Block(nn.Module):
+  """
+  Transformer block for the ViT.
+  Parameters:
+    dim: Embedding dim
+    n_heads: Number of heads in MHA
+    mlp_ratio: Dimensionality of hidden layer in MLP, mlp_ratio*input_dim
+    qkv_bias: Whether to include bias in Q, K, V projections
+    p: Dropout Prob
+    attn_p: Dropout prob for attention 
+  Attribute:
+    norm1: Layer norm
+    norm2: Layer norm
+    attn: attention module
+    mlp: MLP block
+  """
+  def __init__(self, 
+               dim: int=768, 
+               n_heads: int=12, 
+               mlp_ratio: int=4, 
+               qkv_bias: bool=True, 
+               p: float=0.0, 
+               attn_p: float=0.0):
+    super().__init__()
+    self.norm1 = nn.LayerNorm(dim, eps=1e-6)
+    self.attn = Attention(dim, n_heads, qkv_bias, attn_p, p)
+    self.norm2 = nn.LayerNorm(dim, eps=1e-6)
+    self.mlp = MLP(dim, mlp_ratio*dim, dim, p)
 
+  def forward(self, x):
+    x = x + self.attn(self.norm1(x))
+    return x + self.mlp(self.norm2(x))
+
+
+class 
