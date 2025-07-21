@@ -40,7 +40,7 @@ class PatchEmbedding(nn.Module):
 
   def forward(self, x: torch.tensor) -> torch.tensor:
     patches = self.patcher(x).flatten(-2, -1).permute(0, 2, 1)
-    return torch.cat((self.class_token.repeat(patches.shape[0], 1, 1), patches), dim=1) + self.positional_encoding
+    return torch.cat((self.class_token.expand(patches.shape[0], -1, -1), patches), dim=1) + self.positional_encoding
 
 
 class LayerNorm(nn.Module):
@@ -209,6 +209,7 @@ class ViT_Base(nn.Module):
   Attributes:
     PatchEmbedding: Module to convert images to patches, with class & positional 
     encodings.
+    pos_dropout: Dropout layer after positional encodings.
     trf_blocks: Series of Transformer Blocks.
     head: MLP end section for classification based on class token's descendents.
 
@@ -239,6 +240,7 @@ class ViT_Base(nn.Module):
     """
     super().__init__()
     self.PatchEmbedding = PatchEmbedding(in_channels, img_size, patch_size, embed_dim)
+    self.pos_dropout = nn.Dropout(mlp_dropout)
     self.trf_blocks = nn.Sequential(
         *[TransformerBlock(in_dim=embed_dim, 
                            out_dim=embed_dim, 
@@ -254,6 +256,6 @@ class ViT_Base(nn.Module):
 
   def forward(self, x: torch.tensor) -> torch.tensor:
     x = self.PatchEmbedding(x)
+    x = self.pos_dropout(x)
     x = self.trf_blocks(x)
-    return self.head(x[:, 0, :])
-
+    return self.head(x[:, 0])
