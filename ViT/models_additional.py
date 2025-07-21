@@ -1,7 +1,6 @@
 """
-Model definitions for vision classification tasks.
+Model definitions of Vision Transformer for vision classification tasks.
 """
-
 import torch
 import torch.nn as nn
 
@@ -159,6 +158,15 @@ class FeedForward(nn.Module):
 
   
 class TransformerBlock(nn.Module):
+  """
+  Transformer Block for the ViT.
+
+  Attributes:
+    attention: Multi-Head Self Attention sub-module.
+    MLP: Multi-Layer Perceptron sub-module.
+    norm1: Initial Layer Norm.
+    norm2: Intermediate Layer Norm.
+  """
   def __init__(self, 
                in_dim: int, 
                out_dim: int, 
@@ -166,6 +174,17 @@ class TransformerBlock(nn.Module):
                num_heads: int, 
                mlp_size: int,
                dropout: float):
+    """
+    Initializes an instance of the Transformer Block object.
+
+    Args:
+      in_dim: Input dimension to the block.
+      out_dim: Output dimension of the MHSA sub-section.
+      embed_dim: Embedding dimension, input to the MLP sub-setion.
+      num_heads: Number of heads in the MHSA.
+      mlp_size: Intermediate/hidden dimension for the MLP sub-section.
+      dropout: Dropout rate for the MLP sub-section.
+    """
     super().__init__()
     self.attention = MultiHeadAttention(in_dim, out_dim, num_heads)
     self.MLP = FeedForward(embed_dim, mlp_size, dropout)
@@ -184,6 +203,16 @@ class TransformerBlock(nn.Module):
 
 
 class ViT_Base(nn.Module):
+  """
+  Implimentation of the ViT-Base from Dosovitskiy et al (2021).
+
+  Attributes:
+    PatchEmbedding: Module to convert images to patches, with class & positional 
+    encodings.
+    trf_blocks: Series of Transformer Blocks.
+    head: MLP end section for classification based on class token's descendents.
+
+  """
   def __init__(self, 
                in_channels: int, 
                img_size: int, 
@@ -194,6 +223,20 @@ class ViT_Base(nn.Module):
                mlp_size: int, 
                mlp_dropout: float, 
                num_classes: int):
+    """
+    Initializes an instance of the ViT_Base object.
+
+    Args:
+      in_channels: Number of channels in input images.
+      img_size: Size of square input images.
+      patch_size: Size of square patches.
+      num_layers: Number of Transformer Blocks.
+      num_heads: Number of heads in the MHSA section.
+      embed_dim: Dimension of the embeddings.
+      mlp_size: Hidden size of the MLP section in the Transformer block.
+      mlp_dropout: Dropout used in the MLP section.
+      num_classes: Number of classes in the output.
+    """
     super().__init__()
     self.PatchEmbedding = PatchEmbedding(in_channels, img_size, patch_size, embed_dim)
     self.trf_blocks = nn.Sequential(
@@ -213,43 +256,4 @@ class ViT_Base(nn.Module):
     x = self.PatchEmbedding(x)
     x = self.trf_blocks(x)
     return self.head(x[:, 0, :])
-
-
-
-
-class TinyVGG(nn.Module):
-  """
-  Reduced scale version of VGG model to classifiy images.
-
-  Attributes:
-    representation: Convolutional section carrying out representation learning.
-    classifier: Densely connected section to translate representations into classes.
-  """
-
-  def __init__(self,
-               in_channels: int,
-               num_classes: int,
-               input_shape: int):
-    """Initializes a new TinyVGG model object.
-
-    Args:
-      in_channels: Number of channels in the input images.
-      num_classes: Number of classes in the output.
-      input_shape: Dimension shape of the square input images
-    """
-    super().__init__()
-    self.representation = nn.Sequential(
-        nn.Conv2d(in_channels, 16, kernel_size=3, stride=1, padding=1), #[n,n,16]
-        nn.ReLU(),
-        nn.Conv2d(16, 16, kernel_size=3, stride=1, padding=1),
-        nn.ReLU(),
-        nn.MaxPool2d(2, 2), #(n/2, n/2,16)
-    )
-    self.classifier = nn.Sequential(
-        nn.Flatten(), #[n/2 * n/2 * 16]
-        nn.Linear(int(input_shape * input_shape * 16 / 4), num_classes)
-    )
-
-  def forward(self, x: torch.tensor) -> torch.tensor:
-    return self.classifier(self.representation(x))
 
