@@ -1,0 +1,17 @@
+ViT_Base:
+    layers: 12
+    hidden_size: 768
+    MLP_size: 3072
+    heads: 12
+
+ViT_Large:
+    layers: 24
+    hidden_size: 1024
+    MLP_size: 4096
+    heads: 16
+
+ViT_Huge:
+    layers: 32
+    hidden_size: 1280
+    MLP_size: 5120
+    heads: 16
